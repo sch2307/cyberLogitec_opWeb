@@ -1,0 +1,20 @@
+body {
+  margin: 0;
+  background: #FFF;
+}
+
+
+#vid {
+  display: none;
+}
+
+#cvs {
+  display: block;
+  position: absolute;
+  top: 10%; left: 0;
+  width: 40%; height: 80%;
+}
+
+#msg {
+  margin: 10px;
+}
