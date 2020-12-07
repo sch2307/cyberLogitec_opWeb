@@ -1,7 +1,7 @@
-const videoWidth = 480;
-const videoHeight = 800;
-const color = 'blue';
-const lineWidth = 10;
+const videoWidth = 720;
+const videoHeight = 1280;
+const color = 'red';
+const lineWidth = 8;
 
 async function setupCamera() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -70,9 +70,7 @@ function detectPoseInRealTime(video, net) {
       if (score >= minPoseConfidence) {
         drawKeypoints(keypoints, minPartConfidence, ctx);
         drawSkeleton(keypoints, minPartConfidence, ctx);
-        if (checkPose(keypoints)){
-            location.href="public/nextpage.html";
-        }
+        scrollToPose(keypoints);
       }
     });
     requestAnimationFrame(poseDetectionFrame);
@@ -135,27 +133,63 @@ function toTuple({y, x}) {
   return [y, x];
 }
 
-function checkPose(keypoints){
-  var noseY = 0;
-  var leftWristY = 0;
-  var rightWristY = 0;
-  var isHandsUp = false;
+function scrollToPose(keypoints){
+  let leftWristY = 0;
+  let rightWristY = 0;
+  let leftShoulder = 0;
+  let rightShoulder = 0;
+  let debugFlag = true;
   for (let i = 0; i < keypoints.length; i++) {
     const keypoint = keypoints[i];
-    if(keypoint.part == "nose"){
-      noseY = keypoint.position.y;
-    } else if(keypoint.part == "leftWrist"){
+    if (keypoint.part == "leftWrist") {
       leftWristY = keypoint.position.y;
-    } else if(keypoint.part == "rightWrist"){
+    } else if(keypoint.part == "rightWrist") {
       rightWristY = keypoint.position.y;
+    } else if(keypoint.part == "leftShoulder") {
+      leftShoulder = keypoint.position.y;
+    } else if(keypoint.part == "rightShoulder") {
+      rightShoulder = keypoint.position.y;
     }
   }
-  // 왼팔과 오른팔의 값이 코의 기준 값보다 크다면, 만세를 한 것으로 추정
-  if (noseY > leftWristY && noseY > rightWristY){
-    isHandsUp = true;
-    console.log("noseY: " + noseY + " leftWristY:" + leftWristY + " rightWristY: " + rightWristY);
+
+  /* 손목이 카메라 영역에서 벗어나있지 않아야함(Scroll Down) */
+  /* (1) 손목의 높이가 어깨의 높이보다 50가량 낮아야함
+   * (2) 손목은 카메라에 나와있어야함. (1280 이상으로 넘어갔다는 것은 뷰파인더 범위 안에 없음)
+   * (3) 손목은 어깨의 높이보단 약간 낮게 있어야하며, 가슴부위보단 높게 있어야함.
+   */
+  if ((leftWristY < (leftShoulder + 50) && leftWristY < videoHeight  &&
+      (leftWristY >= 550 && leftWristY <= (leftShoulder + 150))) ||
+        (rightWristY < (leftShoulder + 50) && rightWristY < videoHeight &&
+          (rightWristY >= 550 && rightWristY <= (rightShoulder + 150)))) {
+
+    let scrollPosition = window.scrollY || document.documentElement.scrollTop;
+    window.scrollTo({top: scrollPosition + 20, left:0, behaviour: 'auto'});
+
+    if (debugFlag) {
+      console.log("leftWristY: " + leftWristY + " leftShoulder:" + leftShoulder);
+      console.log("rightWristY: " + rightWristY + " rightShoulder:" + rightShoulder);
+      console.log("left scroll");
+    }
   }
-  return isHandsUp;
+
+  /* 손목이 카메라 영역에서 벗어나있지 않아야함(Scroll Up) */
+  /* (1) 손목의 높이가 어깨의 높이보다 50 가량 낮아야함
+   * (2) 손목은 카메라에 나와있어야함. (1280 이상으로 넘어갔다는 것은 뷰파인더 범위 안에 없음)
+   * (3) 손목은 어깨의 높이보단 약간 낮게 있어야하며, 가슴부위보단 높게 있어야함.
+   */
+  if ((leftWristY > (leftShoulder - 50) && leftWristY < videoHeight &&
+      (leftWristY >= 550 && leftWristY <= (leftShoulder + 150))) ||
+        (rightWristY > (rightShoulder - 50) && rightWristY < videoHeight &&
+          (rightWristY >= 550 && rightWristY <= (rightShoulder + 150)))) {
+
+    let scrollPosition = window.scrollY || document.documentElement.scrollTop;
+    window.scrollTo({top: scrollPosition - 20, left:0, behaviour: 'auto'});
+    if (debugFlag) {
+      console.log("leftWristY: " + leftWristY + " leftShoulder:" + leftShoulder);
+      console.log("rightWristY: " + rightWristY + " rightShoulder:" + rightShoulder);
+      console.log("right scroll");
+    }
+  }
 }
 
 navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
